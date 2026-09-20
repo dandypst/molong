@@ -1,0 +1,18 @@
+# secrets & local config
+.env
+.env.*
+!.env.example
+creds_*.json
+owner_pending.json
+
+# node
+node_modules/
+
+# logs & dev scratch
+*.log
+probe*.mjs
+llm_check.mjs
+setup_testnet.mjs
+do_setup.mjs
+setup.log
+.DS_Store
