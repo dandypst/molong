@@ -3,8 +3,8 @@
 Multi-tenant chatbot with **cross-session, cross-device** long-term memory built on
 **Walrus Memory (MemWal)**. It is live on **Walrus mainnet** through the public
 relayer. The primary model is declared as `ling-3.0-flash-fin` (InclusionAI
-model lineage) through an OpenAI-compatible Jerouter runtime. The gateway's upstream
-routing should be confirmed before making a provider-eligibility claim.
+model lineage) through an OpenAI-compatible Jerouter runtime. The gateway does not expose
+its upstream routing, so no unverified provider is claimed.
 
 > "Build something that doesn't forget." 🦭🧠
 

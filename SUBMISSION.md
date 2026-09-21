@@ -39,7 +39,7 @@ The verifier recently passed: key integrity matched, health was `ok`, `write_rea
 
 ## Verified behavior
 
-- `npm test`: 6/6 tests passed
+- `npm test`: 8/8 tests passed
 - `npm run check`: passed
 - `git diff --check`: passed
 - Mock recall and cross-tenant isolation: passed

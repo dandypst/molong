@@ -27,8 +27,8 @@ Verified: 2026-09-21 06:00 WIB
 
 ## Automated gates
 
-- `npm test`: 6/6 passed.
-- `npm run check`: all JavaScript syntax checks passed.
+- `npm test`: 8/8 passed.
+- `npm run check`: all JavaScript syntax checks passed, including `rate_limit.mjs`.
 - `git diff --check`: passed.
 - Added-line secret scan: no matches.
 - Public HTML unsafe HTML sink scan (`innerHTML`, `insertAdjacentHTML`, `eval`, `Function`): no matches.
