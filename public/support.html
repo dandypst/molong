@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Molong Support 🦭 — Kopi Walrus CS (Walrus Memory)</title>
+<style>
+  :root{--bg:#14100b;--panel:#1f1812;--ink:#f5eee4;--muted:#a89a86;--acc:#c98a3d;--acc2:#8a5a2b;--ok:#7fc96b;--line:#332818}
+  *{box-sizing:border-box}body{margin:0;font-family:system-ui,sans-serif;background:radial-gradient(1000px 500px at 80% -10%,#2a1f12 0,var(--bg) 60%);color:var(--ink);display:flex;flex-direction:column;height:100vh}
+  header{display:flex;gap:12px;align-items:center;padding:14px 18px;border-bottom:1px solid var(--line);background:rgba(31,24,18,.7);position:sticky;top:0}
+  header .logo{font-size:26px}header h1{font-size:16px;margin:0}header .sub{font-size:11px;color:var(--muted);margin-top:2px}
+  .ident{margin-left:auto;display:flex;gap:8px}.ident input{background:var(--panel);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:8px 10px;font-size:13px;width:170px}
+  .back{color:var(--muted);text-decoration:none;font-size:13px}
+  main{flex:1;overflow:auto;padding:18px;max-width:780px;width:100%;margin:0 auto;display:flex;flex-direction:column;gap:10px}
+  .msg{display:flex;flex-direction:column;gap:3px;max-width:80%}.msg .who{font-size:11px;color:var(--muted)}
+  .msg .bubble{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px 13px;line-height:1.45;font-size:14.5px;white-space:pre-wrap}
+  .msg.cust{align-self:flex-end}.msg.cust .bubble{background:linear-gradient(135deg,var(--acc),var(--acc2));border:none;color:#fff}
+  .msg .meta{font-size:10.5px;color:var(--muted)}.msg .meta .ok{color:var(--ok)}
+  .day{align-self:center;font-size:11px;color:var(--muted);border:1px dashed var(--line);border-radius:8px;padding:3px 10px;margin:6px 0}
+  footer{padding:12px 16px 16px;border-top:1px solid var(--line);background:rgba(31,24,18,.7)}
+  form{display:flex;gap:10px;max-width:780px;margin:0 auto}
+  form input{flex:1;background:var(--panel);border:1px solid var(--line);color:var(--ink);border-radius:12px;padding:12px 14px;font-size:14.5px}
+  form button{background:linear-gradient(135deg,var(--acc),var(--acc2));border:none;color:#fff;border-radius:12px;padding:12px 18px;font-size:14px;font-weight:600;cursor:pointer}
+  form button:disabled{opacity:.6;cursor:wait}
+  .hint{align-self:center;color:var(--muted);font-size:12.5px;padding:6px}
+  .typing .bubble{opacity:.7}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">☕</div>
+  <div>
+    <h1>Molong Support — Kopi Walrus</h1>
+    <div class="sub">customer support yang ingat pelanggan lintas sesi &amp; perangkat · memory: Walrus Memory (mainnet)</div>
+  </div>
+  <div class="ident">
+    <a class="back" href="/">← Molong</a>
+    <input id="user" placeholder="id pelanggan (mis. siti)" autocomplete="off" />
+  </div>
+</header>
+<main id="chat">
+  <div class="hint">Skenario CS: Mulamkan pelanggan chat soal langganan kopi. Besok (sesi baru, perangkat apa pun) Molong Support masih ingat order &amp; pengaduannya.</div>
+</main>
+<footer>
+  <form id="f">
+    <input type="text" id="in" placeholder="Chat ke Molong Support… (bahasa apa pun)" autocomplete="off" />
+    <button id="send">Kirim</button>
+  </form>
+</footer>
+<script>
+const chat=document.getElementById('chat'),in_=document.getElementById('in'),
+      f=document.getElementById('f'),btn=document.getElementById('send'),user=document.getElementById('user');
+user.value=localStorage.getItem('molong_support_user')||'';
+user.addEventListener('change',()=>localStorage.setItem('molong_support_user',user.value));
+
+function add(who,txt,meta){
+  const d=document.createElement('div');d.className='msg '+who;
+  const whoEl=document.createElement('div');whoEl.className='who';whoEl.textContent=who;
+  const bubble=document.createElement('div');bubble.className='bubble';bubble.textContent=txt;
+  d.append(whoEl,bubble);
+  if(meta){const m=document.createElement('div');m.className='meta';m.textContent=meta;d.appendChild(m);}
+  chat.appendChild(d);chat.scrollTop=chat.scrollHeight;return d;
+}
+function day(t){const d=document.createElement('div');d.className='day';d.textContent=t;chat.appendChild(d);}
+
+f.addEventListener('submit',async e=>{
+  e.preventDefault();const text=in_.value.trim(),u=user.value.trim();
+  if(!text)return;if(!u){user.focus();return;}
+  in_.value='';btn.disabled=true;
+  add('cust',text);
+  const think=add('molong','…');think.classList.add('typing');
+  try{
+    const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({text,user:u,role:'support'})});
+    const j=await r.json();
+    if(!r.ok)throw new Error(j.error||r.statusText);
+    think.querySelector('.bubble').textContent=j.reply;think.classList.remove('typing');
+    let meta='';
+    if(j.memoriesRecalled>0)meta='🧠 recalled '+j.memoriesRecalled+' memori pelanggan';
+    if(meta){const m=document.createElement('div');m.className='meta';m.textContent=meta;think.appendChild(m);}
+  }catch(err){think.querySelector('.bubble').textContent='⚠️ '+(err.message||'error');think.classList.remove('typing');}
+  btn.disabled=false;in_.focus();chat.scrollTop=chat.scrollHeight;
+});
+</script>
+</body>
+</html>

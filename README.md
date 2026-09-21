@@ -1,17 +1,23 @@
 # Molong 🦭 — a chatbot that remembers (Walrus Sessions 8)
 
 Multi-tenant chatbot with **cross-session, cross-device** long-term memory built on
-**Walrus Memory (MemWal)**. Live on **Sui mainnet** via the Walrus Foundation public
-relayer (`relayer.memory.walrus.xyz`). The brain is a non-OpenAI/Anthropic model
-(`ling-3.0-flash` via an OpenAI-compatible gateway) → qualifies for the
-**"Beyond the Big Two"** category.
+**Walrus Memory (MemWal)**. It is live on **Walrus mainnet** through the public
+relayer. The primary model is declared as `ling-3.0-flash-fin` (InclusionAI
+model lineage) through an OpenAI-compatible Jerouter runtime. The gateway's upstream
+routing should be confirmed before making a provider-eligibility claim.
 
-> "Build something that doesn't forget. 🦭🧠"
+> "Build something that doesn't forget." 🦭🧠
 
 ## Live
-- **Public demo:** `https://hosted-electronic-beaches-southampton.trycloudflare.com`
-  (Cloudflare quick tunnel → Express:8090; served from Singapore edge)
-- **Memory backend:** Walrus mainnet, encrypted at rest (SEAL), per-user namespace.
+
+- **Public demo:** `https://banana-another-varying-indicates.trycloudflare.com`
+- **Support demo:** `https://banana-another-varying-indicates.trycloudflare.com/support.html`
+- **Source and setup:** https://github.com/dandypst/molong
+- **Deployment evidence:** `DEPLOYMENT.md`
+- **Memory backend:** Walrus mainnet, SEAL-encrypted, per-user namespace. The local `pending_notes.json` file is only a permission-protected retry buffer; it is never used for recall.
+- **Runtime:** Node `26.7.0`, Express, MemWal `0.1.7`.
+
+The Cloudflare URL is a quick tunnel and changes after a restart.
 
 ## What it does
 - Remembers a user's identity, preferences, facts, goals across **many sessions and
@@ -21,24 +27,30 @@ relayer (`relayer.memory.walrus.xyz`). The brain is a non-OpenAI/Anthropic model
   and weaves them into the reply.
 - Each turn it **remembers** a distilled, durable fact about the user, encrypted at
   rest (SEAL) and stored on Walrus mainnet blobs.
-- **Tenant isolation:** each user id → its own Walrus `namespace`; one user's memory is
-  never recalled into another's.
+- **Tenant separation:** each user id maps to a distinct Walrus `namespace`; a
+  different namespace recalled nothing in the live isolation test. The user id is
+  client-supplied and is **not authentication**—do not treat this demo as an
+  authorization boundary.
 
-## Verified on mainnet (2026-09-20)
+## Verified on mainnet (2026-09-21)
+
 | Check | Result |
 |---|---|
-| `remember` → mainnet blob (SEAL-encrypted) | ✅ job confirmed |
-| `recall` across a "new session" (semantic) | ✅ `memoriesRecalled=2`, answered name/profession/preference from memory |
-| Cross-tenant isolation (user `siti` asked about `rio-test`) | ✅ 0 leak — bot had nothing on that user |
-| Relayer health | ✅ `write_ready:true` |
+| `remember` → mainnet blob | ✅ job confirmed |
+| `recall` across a fresh request | ✅ `memoriesRecalled=1`; answer used stored name/preference |
+| `/api/memory` | ✅ returned `Rio Public is a user who prefers concise answers.` |
+| Cross-tenant isolation | ✅ different user returned `memoriesRecalled=0` |
+| Relayer health | ✅ `status=ok`, `write_ready=true` |
+| Blob evidence | ✅ 16 account blobs; 11 application blobs after excluding `verify-*` |
+| Delegate key integrity | ✅ derived public key matches provided public key |
 
 ## Stack
 | Layer | Choice |
 |---|---|
 | Memory | `@mysten-incubation/memwal` v0.1.7 → Walrus Memory (Sui mainnet, public relayer `relayer.memory.walrus.xyz`) |
 | Encryption | SEAL (ED25519 delegate key, at-rest encryption on Walrus blobs) |
-| Orchestration | Node 20+ / Express, single file |
-| LLM | `ling-3.0-flash` via `je.jerouter.web.id` (OpenAI-compatible, **not** OpenAI/Anthropic) |
+| Orchestration | Node 20+ / Express, modular server + memory-note helper |
+| LLM | `ling-3.0-flash-fin` (InclusionAI lineage) via `je.jerouter.web.id` (OpenAI-compatible runtime; upstream routing is not exposed) |
 | Frontend | static single-page chat UI |
 | Edge | Cloudflare quick tunnel |
 
@@ -48,7 +60,7 @@ Browser ──(user id + text)──▶ molong (Express)
                                  │
         ┌────────────────────────┴───────────────────────────┐
         │ 1. recall(query, namespace=user)  ◀── Walrus Memory │  semantic top-K
-        │ 2. LLM reply with recalled memories in system prompt│  ling-3.0-flash
+        │ 2. LLM reply with recalled memories as untrusted user context       │  ling-3.0-flash-fin
         │ 3. LLM distill "memory note" ─▶ remember(note, ns)   │  SEAL-encrypt → mainnet blob
         │    (runs in the background so the reply is fast)      │
         └─────────────────────────────────────────────────────┘
@@ -72,8 +84,9 @@ USE_MOCK=1 PORT=8091 node membot.mjs
 ```
 Endpoints:
 - `POST /api/chat {text, user}` — recall → reply → remember
-- `GET  /api/memory?user=<id>` — list what the bot remembers for that user (`restore`)
+- `GET  /api/memory?user=<id>` — broad semantic recall of stored facts for that user
 - `GET  /api/health` — relayer + model status
+- API rate limit: 30 requests/minute per source IP (source; restart required for the running demo)
 - static UI at `/`
 
 ## Verification
@@ -86,20 +99,22 @@ Endpoints:
 
 ## Competition mapping (Walrus Sessions 8)
 - ✅ Chatbot using Walrus Memory on **mainnet** (public relayer) — live
-- ✅ Deployed and in use (multi-day window, deadline 9 Oct 14:00 UTC)
-- 📝 Article on integration & usage results — in progress
-- 📣 Post on X with `#WalrusMemory` — in progress
-- ✅ Submit repo + model used (`ling-3.0-flash`) + bugs found + improvement ideas
+- ✅ Deployed and reachable; real-user usage evidence still needed before submit
+- ✅ Model/runtime disclosed; gateway upstream is not exposed, so no unverified provider is claimed
+- 📝 Article draft complete in `ARTICLE.md`; publication pending
+- 📣 Share the published article on X tagging `@WalrusProtocol` under the session announcement using `#WalrusMemory` — pending
+- ✅ Agent ID and blob count prepared; public repo published at https://github.com/dandypst/molong; submit form pending required inputs
+- 📋 DeepSurge also requests evidence of at least 3 users with at least 10 memories each
 
 ## Bugs found / improvement ideas
 - **Timeout behavior:** the public relayer's `remember` job + `recall` can each take
-  tens of seconds under load; the app ships a `Promise.race` cap on `restore` and
-  background (fire-and-forget) memory writes so the reply is never held up by the
-  memory layer.
-- `qwen3.8-27b` was flaky/slow via the gateway for this use case; `ling-3.0-flash`
+  tens of seconds under load; request-path calls are capped with `Promise.race`, while
+  memory writes run in the background so the reply is not held by write confirmation.
+- `qwen3.8-27b` was flaky/slow via the gateway for this use case; `ling-3.0-flash-fin`
   (~3s) replaced it with better memory-note extraction quality.
 - Single-operator namespace multiplexing: move per-user keys on-chain for a stronger
   trust boundary (delegate key per user) instead of one operator key + namespaces.
 - Add `POST /api/chat/stream` SSE for token streaming.
 - Recall re-ranking + forgetting (decay / `restore`-then-prune) for long histories.
-- Idempotency keys on `remember` to dedupe repeated facts.
+- Idempotency keys on `remember` dedupe repeated facts and let restart recovery resume
+  the same accepted job where possible.

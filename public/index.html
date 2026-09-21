@@ -57,7 +57,7 @@
   <div class="logo">🦭</div>
   <div>
     <h1>Molong — remembers across sessions &amp; devices</h1>
-    <div class="sub">long-term memory: Walrus Memory · model: <span id="model">…</span></div>
+    <div class="sub">long-term memory: Walrus Memory · model: <span id="model">…</span> · <a href="/support.html" style="color:var(--acc)">☕ CS demo</a></div>
   </div>
   <div class="ident">
     <button class="membtn" id="memshow" title="Show what Molong remembers about this user">🧠 my memory</button>
@@ -82,9 +82,15 @@ user.addEventListener('change',()=>localStorage.setItem('molong_user',user.value
 
 function add(who,txt,meta){
   const d=document.createElement('div');d.className='msg '+who;
-  d.innerHTML='<div class="who">'+who+'</div><div class="bubble"></div>'+(meta?'<div class="meta"></div>':'');
-  d.querySelector('.bubble').textContent=txt;
-  if(meta)d.querySelector('.meta').innerHTML=meta;
+  const whoEl=document.createElement('div');whoEl.className='who';whoEl.textContent=who;
+  const bubble=document.createElement('div');bubble.className='bubble';bubble.textContent=txt;
+  d.append(whoEl,bubble);
+  if(meta){
+    const m=document.createElement('div');
+    m.className='meta';
+    m.textContent=meta;
+    d.appendChild(m);
+  }
   chat.appendChild(d);chat.scrollTop=chat.scrollHeight;return d;
 }
 async function health(){try{const r=await fetch('/api/health');const j=await r.json();
@@ -95,16 +101,26 @@ document.getElementById('memshow').addEventListener('click',async()=>{
   const p=document.getElementById('mempanel'),ul=document.getElementById('memlist'),
         mu=document.getElementById('memuser');
   const u=user.value.trim();mu.textContent=u;
-  p.style.display='block';ul.innerHTML='<li class="empty">loading…</li>';
+  p.style.display='block';ul.textContent='loading…';
   p.scrollIntoView({behavior:'smooth',block:'nearest'});
   try{
     const r=await fetch('/api/memory?user='+encodeURIComponent(u));
     const j=await r.json();
     if(!r.ok)throw new Error(j.error||r.statusText);
-    ul.innerHTML='';
-    if(!j.memories.length){ul.innerHTML='<li class="empty">nothing remembered yet for “'+u+'”.</li>';return;}
-    j.memories.forEach(m=>{const li=document.createElement('li');li.textContent=m;ul.appendChild(li);});
-  }catch(err){ul.innerHTML='<li class="empty">⚠️ '+(err.message||'error')+'</li>';}
+    ul.textContent = '';
+    if (!j.memories.length) {
+      const li = document.createElement('li');
+      li.className = 'empty';
+      li.textContent = `nothing remembered yet for “${u}”.`;
+      ul.appendChild(li);
+      return;
+    }
+    j.memories.forEach(m => {
+      const li = document.createElement('li');
+      li.textContent = m;
+      ul.appendChild(li);
+    });
+  }catch(err){ul.textContent='⚠️ '+(err.message||'error');}
 });
 
 f.addEventListener('submit',async e=>{
@@ -119,11 +135,9 @@ f.addEventListener('submit',async e=>{
     if(!r.ok)throw new Error(j.error||r.statusText);
     think.querySelector('.bubble').textContent=j.reply;think.classList.remove('typing');
     let meta='';
-    if(j.memoriesRecalled>0)meta+='<span class="ok">🧠 recalled '+j.memoriesRecalled+' memory'+(j.memoriesRecalled>1?'s':'')+'</span> ';
-    if(j.memoryQueued)meta+='<span class="ok">· 🧠 remembering this…</span>';
-    think.querySelector('.meta')&&(think.querySelector('.meta').innerHTML=meta||'&nbsp;');
-    if(!think.querySelector('.meta')){const m=document.createElement('div');m.className='meta';
-      m.innerHTML=meta||'&nbsp;';think.appendChild(m);}
+    if(j.memoriesRecalled>0)meta+='🧠 recalled '+j.memoriesRecalled+' memory'+(j.memoriesRecalled>1?'s':'')+' ';
+    if(j.memoryQueued)meta+='· 🧠 remembering this…';
+    if(meta){const m=document.createElement('div');m.className='meta';m.textContent=meta;think.appendChild(m);}
   }catch(err){think.querySelector('.bubble').textContent='⚠️ '+(err.message||'error');think.classList.remove('typing');}
   btn.disabled=false;in_.focus();chat.scrollTop=chat.scrollHeight;
 });

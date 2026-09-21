@@ -16,3 +16,4 @@ setup_testnet.mjs
 do_setup.mjs
 setup.log
 .DS_Store
+pending_notes.json
