@@ -1,6 +1,6 @@
 # Molong — Walrus Sessions 8 submission manifest
 
-Status: **GitHub repo populated; form not submitted**
+Status: **GitHub repo populated; dedicated reward wallet confirmed; registration confirmed; form not submitted**
 Prepared: 2026-09-21
 Decision required: Tedjo approved form submission on 2026-09-21; public article/X actions and missing submission inputs remain separate blockers.
 
@@ -28,6 +28,7 @@ Decision required: Tedjo approved form submission on 2026-09-21; public article/
 
 - Agent ID (public Ed25519 delegate public key): `c293f9ec45cf68b3ee84a961b2a223f72aa3f2d9b0949013beb4d6a9c3456cec`
 - Account ID: `0x964db47dd3a74159b9f02abd12e859bacd2b563f9d5c1d765ef727c1085e2f19`
+- Dedicated Sessions reward wallet: `0x964db47dd3a74159b9f02abd12e859bacd2b563f9d5c1d765ef727c1085e2f19` (confirmed by Tedjo)
 - Account blob count at last count: 16
 - Application blob count after excluding `verify-*`: 11
 - Required threshold: at least 10 blobs at submission
@@ -53,11 +54,11 @@ The verifier recently passed: key integrity matched, health was `ok`, `write_rea
 ## Remaining submission blockers
 
 - [x] Model/runtime disclosed; the gateway does not expose its upstream provider, so the submission will state that limitation instead of inventing one.
-- [ ] Register on DeepSurge and complete the application fields (project name, description, primary contact, GitHub account).
-- [ ] Confirm the public GitHub repository at https://github.com/dandypst/molong contains source code and setup instructions, then add its URL to the form.
-- [ ] Add a dedicated Sessions wallet address created specifically for this event.
-- [ ] Publish the article on Medium or Inkray; include what the chatbot does, the Walrus Memory integration, before/after behavior, and real-use evidence. `ARTICLE.md` is only the draft.
-- [ ] Showcase at least 3 different users and at least 10 memories per user, as requested on the DeepSurge event page.
+- [x] Tedjo confirms registration for Walrus Sessions 8. The public instructions use the same Airtable form for builder registration/submission and do not request a separate DeepSurge application/project URL.
+- [x] Public GitHub repository at https://github.com/dandypst/molong contains source code and setup instructions.
+- [x] Add a dedicated Sessions wallet address created specifically for this event: `0x964db47dd3a74159b9f02abd12e859bacd2b563f9d5c1d765ef727c1085e2f19`.
+- [x] Tedjo confirms the DeepSurge threshold of 3 different users with at least 10 memories each; evidence ledger and attachments are being packaged.
+- [ ] Publish the article on Medium or Inkray; include what the chatbot does, the Walrus Memory integration, before/after behavior, and real-use evidence. `ARTICLE.md` is the final source draft.
 - [ ] Complete the Walrus Memory feedback form with at least one bug/friction point and one improvement idea.
 - [ ] Open any related MemWal GitHub issue(s), if applicable.
 - [ ] Join the Walrus Discord.

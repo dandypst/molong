@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node membot.mjs",
     "test": "node --test tests/*.test.mjs",
-    "check": "node --check membot.mjs && node --check rate_limit.mjs && node --check memory_note.mjs && node --check verify_mainnet.mjs && node --check verify_memory.mjs && node --check count_namespaces.mjs",
+    "check": "node --check membot.mjs && node --check rate_limit.mjs && node --check memory_note.mjs && node --check lib/relayer.mjs && node --check lib/http.mjs && node --check lib/llm.mjs && node --check api/chat.mjs && node --check api/memory.mjs && node --check api/health.mjs && node --check verify_mainnet.mjs && node --check verify_memory.mjs && node --check count_namespaces.mjs",
     "verify:mock": "USE_MOCK=1 node verify_memory.mjs",
     "verify:mainnet": "node verify_mainnet.mjs",
     "count:blobs": "node count_namespaces.mjs"

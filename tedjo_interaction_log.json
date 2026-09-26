@@ -1,0 +1,80 @@
+[
+  {
+    "timestamp": "2026-09-24T23:47:26.024558",
+    "step": 1,
+    "test_name": "First intro",
+    "input": "Hello Molong! My name is Tedjo. I live in Indonesia.",
+    "output": {
+      "reply": "Hello Tedjo! Welcome! It's nice to meet you. \ud83d\ude0a\n\nHow can I help you today?",
+      "user": "tedjo",
+      "memoriesRecalled": 0,
+      "memoryQueued": true,
+      "ts": 1790268446023
+    }
+  },
+  {
+    "timestamp": "2026-09-24T23:47:30.133581",
+    "step": 2,
+    "test_name": "Add preferences",
+    "input": "My favorite color is blue and I love coffee.",
+    "output": {
+      "reply": "Nice to meet you, Tedjo! \ud83c\udf89\n\nI'll remember that your favorite color is blue and you love coffee. Sounds like a great combo \u2014 a blue-themed cup of coffee, perhaps? \u2615\ud83d\udc99\n\nFeel free to share more about yourself anytime. I'm here to chat and help however I can!",
+      "user": "tedjo",
+      "memoriesRecalled": 0,
+      "memoryQueued": true,
+      "ts": 1790268450132
+    }
+  },
+  {
+    "timestamp": "2026-09-24T23:47:34.553340",
+    "step": 3,
+    "test_name": "Add work info",
+    "input": "I'm working on bug bounty projects this week.",
+    "output": {
+      "reply": "That sounds exciting! Bug bounty hunting can be really rewarding. Are you targeting any specific platforms or programs this week, or is there anything I can help you with \u2014 like research, recon notes, or anything else?",
+      "user": "tedjo",
+      "memoriesRecalled": 0,
+      "memoryQueued": true,
+      "ts": 1790268454551
+    }
+  },
+  {
+    "timestamp": "2026-09-24T23:47:38.627724",
+    "step": 4,
+    "test_name": "Recall test 1",
+    "input": "What did I tell you about myself?",
+    "output": {
+      "reply": "I don't have any stored memories about you yet \u2014 there are no recalled long-term memories for your profile. If you'd like me to remember something about yourself (like your name, interests, or any other details), just share it and I'll save it for future conversations!",
+      "user": "tedjo",
+      "memoriesRecalled": 0,
+      "memoryQueued": true,
+      "ts": 1790268458626
+    }
+  },
+  {
+    "timestamp": "2026-09-24T23:47:43.249699",
+    "step": 5,
+    "test_name": "Add more detail",
+    "input": "I also have a project called Molong using Walrus Memory.",
+    "output": {
+      "reply": "That's a cool project name! It's interesting that your project is called **Molong** \u2014 same name I go by here. \ud83d\ude0a\n\nIf you'd like to share more about what **Molong** does or how it uses **Walrus Memory**, I'd love to hear about it. Whether it's a memory system, an AI tool, or something else entirely \u2014 happy to help however I can!",
+      "user": "tedjo",
+      "memoriesRecalled": 0,
+      "memoryQueued": true,
+      "ts": 1790268463248
+    }
+  },
+  {
+    "timestamp": "2026-09-24T23:47:47.727111",
+    "step": 6,
+    "test_name": "Final recall",
+    "input": "Remember what I told you earlier? Tell me everything.",
+    "output": {
+      "reply": "I don't have any prior memories from earlier conversations \u2014 there are no recalled long-term memories stored for you. Each session starts fresh for me, so I won't be able to recall anything you may have told me before.\n\nThat said, I'm happy to chat with you now! If you'd like me to remember something going forward, feel free to share it and I'll keep it in mind during this conversation. \ud83d\ude0a",
+      "user": "tedjo",
+      "memoriesRecalled": 0,
+      "memoryQueued": true,
+      "ts": 1790268467725
+    }
+  }
+]

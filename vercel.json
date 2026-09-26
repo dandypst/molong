@@ -1,0 +1,12 @@
+{
+  "buildCommand": "node --check api/chat.mjs && node --check api/memory.mjs && node --check api/health.mjs && node --check membot.mjs",
+  "rewrites": [
+    { "source": "/", "destination": "/public/index.html" },
+    { "source": "/support.html", "destination": "/public/support.html" }
+  ],
+  "functions": [
+    { "path": "api/chat", "maxDuration": 60 },
+    { "path": "api/memory", "maxDuration": 60 },
+    { "path": "api/health", "maxDuration": 30 }
+  ]
+}

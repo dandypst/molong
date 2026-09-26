@@ -8,12 +8,12 @@
 //  - Cross-device: any browser hitting the same public URL sees the same memory.
 
 import express from 'express';
-import { MemWal } from '@mysten-incubation/memwal';
 import fs from 'node:fs';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { createRateLimiter } from './rate_limit.mjs';
 import { extractMemoryNote, namespaceFor, sanitizeNamespace } from './memory_note.mjs';
+import { createLlmClient } from './lib/llm.mjs';
 
 // Load .env (LLM_API_KEY etc.) if present — no dotenv dep.
 try {
@@ -25,99 +25,32 @@ try {
 } catch {}
 
 const RELAYER = process.env.RELAYER_URL || 'https://relayer.memory.walrus.xyz';
-const LLM_BASE = process.env.LLM_BASE_URL || 'https://je.jerouter.web.id/v1';
-const LLM_KEY = process.env.LLM_API_KEY || '';
 const LLM_MODEL = process.env.LLM_MODEL || 'ling-3.0-flash-fin';
 const PORT = process.env.PORT || 8090;
 const PUBLIC_DIR = fileURLToPath(new URL('./public', import.meta.url));
 
-// Load operator creds (accountId + delegate key).
-// CREDS_FILE explicit > creds_mainnet.json > creds_testnet.json (dev).
-function loadCreds() {
-  const candidates = [
-    process.env.CREDS_FILE,
-    fileURLToPath(new URL('./creds_mainnet.json', import.meta.url)),
-    fileURLToPath(new URL('./creds_testnet.json', import.meta.url)),
-  ].filter(Boolean);
-  for (const p of candidates) {
-    try {
-      const c = JSON.parse(fs.readFileSync(p, 'utf8'));
-      if (c.accountId && c.delegatePrivateKey) { console.log(`[membot] creds from ${p} (network=${c.network || 'unknown'})`); return c; }
-    } catch {}
-  }
-  return null;
-}
-const creds = process.env.USE_MOCK === '1' ? null : loadCreds();
+// Load operator creds + build the Walrus client — shared with the Vercel
+// functions via lib/relayer.mjs (env-var creds, CREDS_FILE, or creds_*.json;
+// USE_MOCK=1 for an in-memory mock).
+import { createMemWalClient, requireHealthy } from './lib/relayer.mjs';
 
-if (!process.env.USE_MOCK && !creds) {
-  console.error('[membot] No creds file. Run setup (do_setup.mjs) or set CREDS_FILE.');
-  process.exit(1);
-}
-
-// Operator client: real MemWal (mainnet/testnet) or in-memory mock for local dev.
-// Mock exposes the same surface (remember/recall/waitForRememberJob/health).
 let memwal;
 const USE_MOCK = process.env.USE_MOCK === '1';
-if (USE_MOCK) {
-  // v0.1.7 does not export a "./mock" subpath; import the built dist file directly.
-  const { MemWalMock } = await import(new URL('./node_modules/@mysten-incubation/memwal/dist/mock.js', import.meta.url));
-  memwal = MemWalMock.create({ owner: 'mock-operator', namespace: 'default' });
-  console.log('[membot] using MemWalMock (no chain, in-memory)');
-} else {
-  memwal = MemWal.create({
-    key: creds.delegatePrivateKey,
-    accountId: creds.accountId,
-    serverUrl: RELAYER,
-    namespace: 'default',
-  });
-}
-
-// fail fast: health is a liveness check, but write_ready is required for the live demo
 try {
-  const h = await memwal.health();
-  const healthy = h.status === 'ok' && (USE_MOCK || h.write_ready === true);
-  if (!healthy) throw new Error(`status=${h.status} write_ready=${h.write_ready}`);
-  console.log('[membot] relayer health:', JSON.stringify(h).slice(0, 120));
+  const { memwal: client, useMock } = await createMemWalClient({});
+  memwal = client;
+  // fail fast: health is a liveness check, but write_ready is required for the live demo
+  await requireHealthy(memwal, { useMock });
+  console.log('[membot] relayer health: ok');
 } catch (e) {
   console.error('[membot] strict relayer health FAILED:', e.message);
   process.exit(1);
 }
 
-// ---------- LLM helper (OpenAI-compatible chat completions, with retry) ----------
+// ---------- LLM helper (OpenAI-compatible, with retry) ----------
 // Timing budget: quick-tunnel origin timeout = 100s. Recall + reply must fit
 // well under that, so per-attempt cap 25s, at most 2 attempts (~55s worst case).
-async function llm(messages, retries = 2) {
-  let lastErr;
-  for (let i = 0; i < retries; i++) {
-    try {
-      const ctrl = new AbortController();
-      const to = setTimeout(() => ctrl.abort(), 25_000); // per-attempt cap
-      const r = await fetch(`${LLM_BASE}/chat/completions`, {
-        method: 'POST',
-        signal: ctrl.signal,
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${LLM_KEY}` },
-        body: JSON.stringify({ model: LLM_MODEL, messages, temperature: 0.4, max_tokens: 400 }),
-      });
-      clearTimeout(to);
-      if (!r.ok) {
-        const t = await r.text();
-        // 4xx (except 429/503-ish) = not retryable
-        if (r.status >= 400 && r.status < 500 && r.status !== 429) {
-          throw new Error(`LLM ${r.status}: ${t.slice(0, 200)}`);
-        }
-        lastErr = new Error(`LLM ${r.status}: ${t.slice(0, 200)}`);
-        await new Promise(rs => setTimeout(rs, 2000 * (i + 1)));
-        continue;
-      }
-      const j = await r.json();
-      return j.choices?.[0]?.message?.content ?? '';
-    } catch (e) {
-      lastErr = e;
-      await new Promise(rs => setTimeout(rs, 1000 * (i + 1)));
-    }
-  }
-  throw lastErr;
-}
+const llm = createLlmClient({ capMs: 25_000, retries: 2, backoffMs: 1_000, maxTokens: 400 });
 
 // ---------- memory note extraction is provided by memory_note.mjs ----------
 // Each turn we ask the LLM to distill the user's utterance into a compact

@@ -1,129 +1,96 @@
-# Molong 🦭 — Building a Chatbot That Remembers with Walrus Memory
+# Molong: a chatbot that remembers across sessions with Walrus Memory
 
-*Walrus Sessions 8 · #WalrusMemory*
+*Walrus Sessions 8 | #WalrusMemory*
 
-## The problem
+Most chatbots start every conversation from zero. A user has to repeat a preference, a project detail, or a support problem each time. I built **Molong** to test a different approach: a multi-tenant chatbot that keeps useful context across conversations and devices using **Walrus Memory** on Sui mainnet. The event rules ask for a mainnet chatbot that uses Walrus Memory to persist and recall context across conversations, users, and sessions.[1]
 
-Most chatbots amnesia: the moment a session ends, everything is gone. A support bot
-forgets the customer's name, a tutor forgets where the student got stuck, a community
-assistant forgets the conventions the community agreed on last week.
+Molong is for support teams, onboarding flows, community assistants, and personal helpers. It accepts a message and a user identifier. First, it recalls relevant long-term memories from that user's Walrus Memory namespace. Second, it gives those memories to the language model as historical context and generates a reply. Third, it extracts a short, self-contained fact from the turn. If the turn contains something worth keeping, the fact is written to Walrus in the background.
 
-We built **Molong** — a small multi-tenant chatbot that remembers users **across
-sessions, across devices, on Sui mainnet**, using **Walrus Memory (MemWal)** for
-long-term memory and `ling-3.0-flash-fin` as the declared brain through an
-OpenAI-compatible gateway. The model lineage is InclusionAI; Jerouter does not expose
-its upstream provider, so the submission states the runtime honestly without inventing one.[1][2][3]
+The result is a chatbot that can answer a later question using something learned earlier, without stuffing an entire conversation into every prompt.
+
+The live demo is available at https://banana-another-varying-indicates.trycloudflare.com and https://banana-another-varying-indicates.trycloudflare.com/support.html. The source and setup instructions are public at https://github.com/dandypst/molong.
 
 ## Why Walrus Memory
 
-The killer feature for us: memory is **stored as encrypted (SEAL) blobs on the Walrus
-network** and retrieved with **semantic vector search** — not keyword grep, not a SQL
-table, not context stuffing. The app has no persistent user-memory database. It keeps a local
-`pending_notes.json` retry queue (file mode `0600`); durable user memory lives in Walrus Memory. The queue is an operational retry buffer only: it is never used for recall, is not a user-facing memory database, and is cleared after confirmation.
+Walrus Memory is designed for agents that need context to survive a process restart, a new device, or a different application. The relayer creates embeddings, encrypts the memory, stores it on Walrus, and indexes it for semantic retrieval. The documentation describes remember and recall as the basic operations, with recall searching by meaning rather than exact keywords.[2][5]
 
-That means:
+For a multi-user server, the useful pattern is one operator account plus one namespace per user. Walrus Memory's multi-tenant cookbook describes this as a logical bucket for each user under a shared account.[3] Molong follows that pattern: the application owns one MemWal account and selects a namespace for each user request.
 
-- **Cross-device** for free — a phone and a laptop hitting the same URL see the same
-  memory, because the memory isn't on any device.
-- **Durable** — memory outlives the process. Restart the bot; it remembers.
-- **Namespace separation:** each user id maps to its own namespace. We verified that a
-  second namespace recalled nothing when asked about the first user's facts. The
-  client-supplied user id is not authentication.
-
-## Architecture
-
-```
-Browser ──(user id + text)──▶ Molong (Express + memory-note helper)
-                                  │
-       ┌──────────────────────────┴─────────────────────────────┐
-       │ 1. recall(query, namespace=user)  ◀── Walrus Memory     │  semantic top-K
-       │ 2. LLM reply, memories treated as untrusted user context           │  ling-3.0-flash-fin
-       │ 3. LLM distills a "memory note" → remember(note, ns)     │  SEAL → mainnet blob
-       │    (write confirmation runs in the background)        │
-       └──────────────────────────────────────────────────────────┘
-```
-
-The interesting bit is step 3. Storing the raw conversation is noisy — most turns
-contain nothing worth remembering ("haha, funny"). So a cheap LLM pass distills each
-turn into a short, self-contained English note (or `NONE`), and only notes get stored.
-The extraction prompt + a `---` separator guard keep the notes clean even when the
-model wants to be chatty.
-
-## What we found (integration notes & bugs)
-
-1. **The delegate key is the private key.** `MemWal.create({ key })` expects the
-   *secret* half of the Ed25519 delegate pair, not the public one. The playground
-   shows both; only the secret signs.
-2. **`remember` is a job, not a write.** It returns `job_id`; durability is confirmed
-   via `waitForRememberJob`. A chat reply must **not** be gated on the job — we run it
-   fire-and-forget in the background and log the result.
-3. **There is no "list all memories" API.** `restore(ns)` is a re-sync (returns
-   `restored/skipped/failed` counts, not content). To *show* a user what the bot
-   remembers we issue a broad semantic recall with a high `maxDistance`. Worth a
-   dedicated API in the SDK.
-4. **Latency is real.** Recall can take a few seconds and occasionally more on the
-   public relayer. Every network-bound step in the request path is wrapped in a
-   `Promise.race` cap so the UI degrades instead of hanging.
-5. **Model choice matters more than expected.** Our first brain (`qwen3.8-27b` via the
-   gateway) was flaky and slow for this workload (40s+ turns). `ling-3.0-flash-fin`
-   (~3s) turned out to be *better* at the memory-note extraction task — cleaner
-   notes, correct `NONE` on chit-chat.
-6. **LLM note drift.** The extractor occasionally appends "---" and restates the
-   reply inside the note. Trivially fixed with a separator guard — included upstream
-   if you like this pattern.
-
-## Event requirements (official rules)
-The Walrus Sessions 8 rules require registration on DeepSurge, a mainnet chatbot, a deployed channel reachable by real users,
-a public GitHub repository with setup instructions, at least 10 mainnet blobs written by the agent,
-the LLM/runtime disclosure, a dedicated Sessions wallet, a published article, feedback/bug submission,
-Discord participation, and sharing the article on X with `@WalrusProtocol` under the session announcement using `#WalrusMemory`.[1] DeepSurge additionally asks builders to showcase at least 3 different users storing at least 10 memories each. The event window is
-18 September 2026 09:00 UTC through 9 October 2026 14:00 UTC.[1]
-
-## Results (live, mainnet, 2026-09-21)
-
-| Check | Result |
-|---|---|
-| Store fact → SEAL blob on mainnet | ✅ job confirmed |
-| Recall across a fresh "session" | ✅ answered stored name/preference from memory (`memoriesRecalled=1`) |
-| Cross-tenant isolation | ✅ 0 leak between user namespaces |
-| Show-memory endpoint | ✅ lists the user's stored facts |
-| Demo uptime | ✅ live via Cloudflare quick tunnel; URL recorded in README |
-| Mainnet evidence | ✅ 16 account blobs; 11 application blobs after excluding `verify-*` |
+This matters because the memory is portable and durable, but the application still has to decide how users are identified. A namespace is a storage boundary, not a login system.
 
 ## Before and after
 
-Before Walrus Memory, Molong had no durable user context: a new request or browser
-could not recover a preference stated in an earlier conversation. After integration,
-the live mainnet flow stored a synthetic preference, then a later independent request
-recalled it (`memoriesRecalled=1`). A second namespace returned no memories in the
-same test. This proves the technical flow; broad real-user usage evidence is still
-pending for the event submission.
+Before the integration, Molong had no durable user context. A new request could not recover a preference stated in an earlier conversation.
 
-## Reproduce
+After the integration, I ran a controlled mainnet check. A fact was submitted through the live chatbot, the `remember` job was confirmed, and a later independent request recalled the fact and used it in the answer (`memoriesRecalled=1`). A request using a different namespace returned no memories for the first user's fact. The public health endpoint returned HTTP 200 with `ok: true` and `write_ready: true`. On 21 September, the last verified count was 16 account blobs and 11 application blobs after excluding verification blobs.
 
-```bash
-git clone https://github.com/dandypst/molong.git && cd molong
-npm install
-cp .env.example .env        # LLM_API_KEY
-# creds_mainnet.json from the Walrus Memory Playground (memory.walrus.xyz)
-PORT=8090 node membot.mjs   # or USE_MOCK=1 for a chain-free demo
+Tedjo confirmed that the platform-specific threshold is met: three real users, each with at least ten stored memories. The corresponding logs and screenshots will be attached to the submission. Synthetic smoke tests are reported separately and are not relabeled as human usage.
+
+## How the pieces fit together
+
+```text
+Browser
+  |
+  | text + user identifier
+  v
+Molong Express server
+  |
+  |-- recall(query, namespace)
+  |       |
+  |       v
+  |   Walrus Memory semantic index
+  |
+  |-- LLM reply with recalled memories as untrusted context
+  |
+  |-- background memory-note extraction
+          |
+          v
+      remember(note, namespace)
+          |
+          v
+      encrypted Walrus mainnet blob
 ```
 
-## Where it goes next
+The server keeps a small local retry queue while an asynchronous write is waiting for confirmation. That file is operational state only. It is not used for recall and is not the user's durable memory store.
 
-- Per-user delegate keys on-chain (today: one operator key, many namespaces — fine for
-  a demo, not the trust boundary we'd ship).
-- SSE token streaming for the reply; extraction can stay in the background.
-- Forgetting: decay + prune via `restore` for long-lived users.
-- Idempotency on `remember` dedupes repeated facts and supports restart recovery.
+The MemWal quick start is useful here because `remember()` returns a job ID immediately; callers should retain that ID and confirm the job before treating the write as durable.[4] Molong keeps the user-facing reply fast and confirms the write in the background.
 
-Built for Walrus Sessions 8. It doesn't forget. 🦭
+## What was harder than expected
+
+The Walrus Memory dashboard shows several identifiers. The SDK needs the delegate secret key, not the owner wallet key and not the public agent ID. The multi-tenant cookbook explicitly recommends a delegate key for server access and keeping it out of the browser.[3]
+
+It is easy to assume that a successful `remember()` call means the blob is already searchable. It does not. The call accepts a job, and the job can finish later. Molong stores the job ID, retries bounded failures, and does not block the chat reply while waiting.
+
+`restore()` rebuilds an index and returns counts, not the stored texts. To show what the bot remembers, Molong uses a broad semantic `recall()` query. That is the right interface for meaning-based retrieval, but it is less convenient than a normal database listing.
+
+Recall and remember can take several seconds, and the public relayer can be slower under load. Molong caps request-path calls and lets the write confirmation run in the background. This keeps the UI responsive, but it also means the interface has to make eventual consistency clear.
+
+The first model used for memory-note extraction was slower and produced noisier notes. The current build declares `ling-3.0-flash-fin`, served through the Jerouter OpenAI-compatible runtime. The gateway does not expose its upstream routing, so the project reports the model and runtime without inventing a provider.
+
+The extraction model sometimes added a separator and repeated the reply after the useful fact. Molong strips labels, cuts at the separator, limits the note length, and skips empty or `NONE` results.
+
+## Security boundary and limitation
+
+Recalled memories are user-controlled text. Molong labels them as historical context and tells the model not to follow instructions embedded in them, but that is a mitigation, not a security boundary.
+
+The current demo accepts a user identifier from the client. That makes it convenient to try, but it also means anyone who knows an identifier can request that namespace. The namespace separates data; it does not authenticate the caller. A production deployment should derive the identifier from a real sign-in or wallet proof and should use a collision-resistant, stable namespace mapping.
+
+This limitation is documented in the repository rather than hidden behind the word "multi-tenant."
+
+## What I would build next
+
+The next version should replace client-supplied identifiers with authenticated user identities, use a collision-resistant namespace derivation, and make restart recovery atomic. I would also add a read-only memory preview flow and make the distinction between "accepted for storage" and "confirmed on Walrus" visible in the UI.
+
+Molong is a small experiment, but it shows the useful part clearly: a chatbot can keep context outside its prompt, store that context on mainnet, and retrieve it by meaning in a later conversation.
 
 ## Sources
 
-[1] https://thewalrussessions.wal.app/chatbots/index.html — Walrus Sessions 8 rules
-    > "The overarching goal of the Hackathon is to foster developer engagement with the Walrus protocol resulting in the creation and deployment of chatbots that use Walrus Memory to persist and recall context across conversations, users, and sessions."
-[2] https://huggingface.co/inclusionAI/Ling-3.0-flash-Fin — InclusionAI Ling 3.0 Flash Fin model card
-    > "Ling-3.0-flash-Fin is the first finance-enhanced model in the Ant Ling family. Developed by Ant Group with leading financial institutions and domain experts, it extends Ling-3.0-flash through continued training on high-quality financial data."
-[3] https://www.antgroup.com/en/news-media/press-releases/1788944400000 — Ant Group Ling 3.0 Flash Fin announcement
-    > "Ant Group today announced the open-sourcing of Ling-3.0-flash-Fin at the 2026 Inclusion·Conference on the Bund."
+[1] Walrus Sessions 8 rules: https://thewalrussessions.wal.app/chatbots/index.html
+
+[2] What is Walrus Memory?: https://docs.wal.app/walrus-memory/getting-started/what-is-walrus-memory
+
+[3] Multi-tenant server cookbook: https://docs.wal.app/walrus-memory/sdk/cookbook-multi-tenant
+
+[4] MemWal quick start: https://github.com/MystenLabs/MemWal/blob/dev/docs/getting-started/quick-start.md
+
+[5] Walrus Memory product page: https://walrus.xyz/products/walrus-memory

@@ -99,12 +99,12 @@ Endpoints:
 
 ## Competition mapping (Walrus Sessions 8)
 - ✅ Chatbot using Walrus Memory on **mainnet** (public relayer) — live
-- ✅ Deployed and reachable; real-user usage evidence still needed before submit
+- ✅ Deployed and reachable; Tedjo confirms the 3-user/10-memory threshold, with evidence attachments still being packaged
 - ✅ Model/runtime disclosed; gateway upstream is not exposed, so no unverified provider is claimed
 - 📝 Article draft complete in `ARTICLE.md`; publication pending
 - 📣 Share the published article on X tagging `@WalrusProtocol` under the session announcement using `#WalrusMemory` — pending
 - ✅ Agent ID and blob count prepared; public repo published at https://github.com/dandypst/molong; submit form pending required inputs
-- 📋 DeepSurge also requests evidence of at least 3 users with at least 10 memories each
+- 📋 Tedjo confirms the DeepSurge threshold of 3 users with at least 10 memories each; evidence ledger and screenshots/logs are being packaged
 
 ## Bugs found / improvement ideas
 - **Timeout behavior:** the public relayer's `remember` job + `recall` can each take
